@@ -73,6 +73,8 @@ class UKF
     * @param meas_package The measurement at k+1
     */
     void UpdateRadar(MeasurementPackage meas_package);
+
+    void GenerateSigmaPoints(MatrixXd* Xsig_out);
 };
 
 #endif /* UKF_H */
