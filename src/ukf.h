@@ -77,6 +77,9 @@ class UKF
     ///* the current NIS for laser
     double NIS_laser_;
 
+    ///* Time Stamp
+    double previous_timestamp_;
+
     /**
     * Constructor
     */
