@@ -15,6 +15,7 @@ UKF::UKF() {
   n_x_ = 5;
   n_aug_ = 7;
   lambda_ = 3 - n_aug_;
+  previous_timestamp_ = 0;
 
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
@@ -72,6 +73,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
     if (!is_initialized_)
     {
         VectorXd measured_pos = meas_package.raw_measurements_;
+        x_ = VectorXd::Zero(n_x_);
+        P_ = MatrixXd::Identity(n_x_, n_x_);
+
         switch (meas_package.sensor_type_)
         {
             case MeasurementPackage::LASER:
@@ -86,8 +90,19 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
                 break;
         }
         is_initialized_ = true;
+        previous_timestamp_ = meas_package.timestamp_;
+
         return;
     }
+
+    double dt = (meas_package.timestamp_ - previous_timestamp_) / 1000000.0;	
+    previous_timestamp_ = meas_package.timestamp_;
+
+    Prediction(dt);
+    if (meas_package.sensor_type_ == MeasurementPackage::LASER)
+        UpdateLidar(meas_package);
+    else if (meas_package.sensor_type_ == MeasurementPackage::RADAR)
+        UpdateRadar(meas_package);
 }
 
 /**
