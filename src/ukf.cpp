@@ -23,7 +23,7 @@ UKF::UKF() {
     weights_(0)= lambda_/(lambda_ + n_aug_);
     assert (fabs(weights_.sum() - 1.0) < 1.0e-6);
 
-    MatrixXd Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+    Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
@@ -35,10 +35,10 @@ UKF::UKF() {
   P_ = MatrixXd(n_x_, n_x_); // state covariance matrix
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 0.1; //30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 0.1; //30;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -128,6 +128,22 @@ void UKF::Prediction(double delta_t)
   */
     MatrixXd Xsig_out = MatrixXd(n_aug_, 2 * n_aug_ + 1);
     GenerateSigmaPoints(&Xsig_out);
+    std::cout << "step 1" << std::endl;
+    std::cout << Xsig_out.rows() << std::endl;
+    std::cout << Xsig_out.cols() << std::endl;
+    //MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+    SigmaPointPrediction(Xsig_out, delta_t);
+    std::cout << "step 2" << std::endl;
+
+    VectorXd x_out = VectorXd(n_x_);
+    MatrixXd P_out = MatrixXd(n_x_, n_x_);
+    PredictMeanAndCovariance(&x_out, &P_out);
+    std::cout << "step 3" << std::endl;
+
+    VectorXd z_out = VectorXd(n_z_);
+    MatrixXd S_out = MatrixXd(n_z_, n_z_);
+    PredictRadarMeasurement(&z_out, &S_out);
+    std::cout << "step 4" << std::endl;
 }
 
 /**
@@ -198,7 +214,7 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out)
     *Xsig_out = Xsig_aug;
 }
 
-void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double delta_t)
+void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, double delta_t)
 {
     double small = 1.0e-6;
 
@@ -250,11 +266,6 @@ void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double del
 
         Xsig_pred_.col(i) = col.head(n_x_) + detrm_col + noise_col;
     }
-
-    //print result
-    std::cout << "Xsig_pred_ = " << std::endl << Xsig_pred_ << std::endl;
-
-    *Xsig_out = Xsig_pred_;
 }
 
 void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
