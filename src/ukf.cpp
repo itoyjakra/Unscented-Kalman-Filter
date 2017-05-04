@@ -342,3 +342,49 @@ void UKF::PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd* z_out, MatrixXd*
   *z_out = z_pred;
   *S_out = S;
 }
+
+void UKF::UpdateState(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out)
+{
+    int n_z = 3;
+    double small = 1.0e-6;
+    VectorXd weights = VectorXd(2*n_aug_+1);
+    weights.fill(0.5/(lambda_ + n_aug_));
+    weights(0)= lambda_/(lambda_ + n_aug_);
+    assert (fabs(weights.sum() - 1.0) < small);
+
+    VectorXd x = VectorXd(n_x_);
+    MatrixXd P = MatrixXd(n_x_, n_x_);
+    MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
+    VectorXd z_pred = VectorXd(n_z);
+    MatrixXd S = MatrixXd(n_z, n_z);
+    VectorXd z = VectorXd(n_z);
+    MatrixXd Tc = MatrixXd(n_x_, n_z);
+
+
+    Tc = MatrixXd::Zero(n_x_, n_z);
+
+	for (int i=0; i<2*n_aug_+1; i++)
+        Tc += weights(i) * (Xsig_pred.col(i) - x) * (Zsig.col(i) - z_pred).transpose();
+
+    std::cout << "---Tc---" << std::endl;
+    std::cout << Tc << std::endl;
+
+    MatrixXd K = MatrixXd(n_x_, n_z);
+    K = Tc * S.inverse();
+    std::cout << "---K---" << std::endl;
+    std::cout << K << std::endl;
+
+    x += K * (z - z_pred);
+    P -= K * S * K.transpose();
+
+
+  //print result
+  std::cout << "Updated state x: " << std::endl << x << std::endl;
+  std::cout << "Updated state covariance P: " << std::endl << P << std::endl;
+
+  //write result
+  *x_out = x;
+  *P_out = P;
+
+
+}
