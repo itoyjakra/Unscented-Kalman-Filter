@@ -78,6 +78,7 @@ class UKF
     void SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double delta_t);
     void PredictMeanAndCovariance(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out);
     void PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd* z_out, MatrixXd* S_out);
+    void UpdateState(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out);
 };
 
 #endif /* UKF_H */
