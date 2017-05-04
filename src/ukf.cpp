@@ -250,3 +250,36 @@ void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double del
 
     *Xsig_out = Xsig_pred;
 }
+
+void UKF::PredictMeanAndCovariance(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out)
+{
+    double small = 1.0e-6;
+    VectorXd weights = VectorXd(2 * n_aug_ + 1);
+    VectorXd x = VectorXd(n_x_);
+    MatrixXd P = MatrixXd(n_x_, n_x_);
+    MatrixXd Xsig_temp1 = MatrixXd(Xsig_pred.rows(), Xsig_pred.cols());
+    MatrixXd Xsig_temp2 = MatrixXd(Xsig_pred.rows(), Xsig_pred.cols());
+
+
+    weights.fill(0.5/(lambda_ + n_aug_));
+    weights(0)= lambda_/(lambda_ + n_aug_);
+    assert (fabs(weights.sum() - 1.0) < small);
+
+    x = Xsig_pred * weights;
+
+    Xsig_temp1 = Xsig_pred;
+    Xsig_temp1.colwise() -= x; //Xsig_temp1.rowwise().mean();
+    Xsig_temp2 = Xsig_temp1;
+    for (int i=0; i<n_x_; i++)
+        for (int j=0; j<2*n_aug_+1; j++)
+            Xsig_temp2(i, j) *= weights(j);
+    P = Xsig_temp2 * Xsig_temp1.transpose();
+
+    std::cout << "Predicted state" << std::endl;
+    std::cout << x << std::endl;
+    std::cout << "Predicted covariance matrix" << std::endl;
+    std::cout << P << std::endl;
+
+    *x_out = x;
+    *P_out = P;
+}
