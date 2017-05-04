@@ -40,6 +40,7 @@ class UKF
 
     int n_x_;                       // State dimension
     int n_aug_;                     // Augmented state dimension
+    int n_z_;                       // Measurement dimension for Radar
     double lambda_;                 // Sigma point spreading parameter
 
     double NIS_radar_;              // the current NIS for radar
