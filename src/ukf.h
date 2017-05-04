@@ -76,7 +76,7 @@ class UKF
     void UpdateRadar(MeasurementPackage meas_package);
 
     void GenerateSigmaPoints(MatrixXd* Xsig_out);
-    void SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double delta_t);
+    void SigmaPointPrediction(MatrixXd Xsig_out, double delta_t);
     void PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out);
     void PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out);
     void UpdateState(VectorXd* x_out, MatrixXd* P_out);
