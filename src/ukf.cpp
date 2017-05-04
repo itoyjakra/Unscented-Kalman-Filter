@@ -283,3 +283,62 @@ void UKF::PredictMeanAndCovariance(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd
     *x_out = x;
     *P_out = P;
 }
+
+void UKF::PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd* z_out, MatrixXd* S_out)
+{
+    int n_z = 3;
+    double small = 1.0e-6;
+    VectorXd weights = VectorXd(2*n_aug_+1);
+    weights.fill(0.5/(lambda_ + n_aug_));
+    weights(0)= lambda_/(lambda_ + n_aug_);
+    assert (fabs(weights.sum() - 1.0) < small);
+    MatrixXd Zsig = MatrixXd(n_x_, 2*n_aug_+1);
+    VectorXd z_pred = VectorXd(n_z);
+    MatrixXd S = MatrixXd(n_z, n_z);
+
+    MatrixXd R = MatrixXd(n_z, n_z);
+
+    double px, py, v, psi, psi_dot, rho, phi, rho_dot;
+    MatrixXd z_temp = MatrixXd(n_z, 2*n_aug_+1);
+    VectorXd z_col = VectorXd(n_z);
+    for (int i=0; i<2*n_aug_+1; i++)
+    {
+        px = Xsig_pred(0, i);
+        py = Xsig_pred(1, i);
+        v = Xsig_pred(2, i);
+        psi = Xsig_pred(3, i);
+        psi_dot = Xsig_pred(4, i);
+
+        rho = sqrt(px*px + py*py);
+        phi = atan2(py, px);
+        if (rho < small)
+            rho_dot = 0;
+        else
+            rho_dot = v * (px * cos(psi) + py * sin(psi)) / rho;
+
+        z_col << rho, phi, rho_dot;
+        z_temp.col(i) = z_col;
+    }
+    z_pred = z_temp * weights;
+
+    S = MatrixXd::Zero(n_z, n_z);
+    for (int i=0; i<2*n_aug_+1; i++)
+    {
+        S += weights(i) * (z_temp.col(i) - z_pred) * (z_temp.col(i) - z_pred).transpose();
+    }
+
+    R = MatrixXd::Zero(n_z, n_z);
+    R(0, 0) = std_radr_ * std_radr_;
+    R(1, 1) = std_radphi_ * std_radphi_;
+    R(2, 2) = std_radrd_ * std_radrd_;
+
+    S += R;
+
+  //print result
+  std::cout << "z_pred: " << std::endl << z_pred << std::endl;
+  std::cout << "S: " << std::endl << S << std::endl;
+
+  //write result
+  *z_out = z_pred;
+  *S_out = S;
+}
