@@ -12,10 +12,15 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
-  n_x_ = 5;
-  n_aug_ = 7;
-  lambda_ = 3 - n_aug_;
-  previous_timestamp_ = 0;
+    n_x_ = 5;
+    n_aug_ = 7;
+    lambda_ = 3 - n_aug_;
+    previous_timestamp_ = 0;
+
+    weights_= VectorXd(2 * n_aug_ + 1);
+    weights_.fill(0.5/(lambda_ + n_aug_));
+    weights_(0)= lambda_/(lambda_ + n_aug_);
+    assert (fabs(weights_.sum() - 1.0) < 1.0e-6);
 
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
@@ -253,26 +258,20 @@ void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double del
 
 void UKF::PredictMeanAndCovariance(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out)
 {
-    double small = 1.0e-6;
-    VectorXd weights = VectorXd(2 * n_aug_ + 1);
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
     MatrixXd Xsig_temp1 = MatrixXd(Xsig_pred.rows(), Xsig_pred.cols());
     MatrixXd Xsig_temp2 = MatrixXd(Xsig_pred.rows(), Xsig_pred.cols());
 
 
-    weights.fill(0.5/(lambda_ + n_aug_));
-    weights(0)= lambda_/(lambda_ + n_aug_);
-    assert (fabs(weights.sum() - 1.0) < small);
-
-    x = Xsig_pred * weights;
+    x = Xsig_pred * weights_;
 
     Xsig_temp1 = Xsig_pred;
     Xsig_temp1.colwise() -= x; //Xsig_temp1.rowwise().mean();
     Xsig_temp2 = Xsig_temp1;
     for (int i=0; i<n_x_; i++)
         for (int j=0; j<2*n_aug_+1; j++)
-            Xsig_temp2(i, j) *= weights(j);
+            Xsig_temp2(i, j) *= weights_(j);
     P = Xsig_temp2 * Xsig_temp1.transpose();
 
     std::cout << "Predicted state" << std::endl;
@@ -286,12 +285,8 @@ void UKF::PredictMeanAndCovariance(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd
 
 void UKF::PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd* z_out, MatrixXd* S_out)
 {
-    int n_z = 3;
     double small = 1.0e-6;
-    VectorXd weights = VectorXd(2*n_aug_+1);
-    weights.fill(0.5/(lambda_ + n_aug_));
-    weights(0)= lambda_/(lambda_ + n_aug_);
-    assert (fabs(weights.sum() - 1.0) < small);
+    int n_z = 3;
     MatrixXd Zsig = MatrixXd(n_x_, 2*n_aug_+1);
     VectorXd z_pred = VectorXd(n_z);
     MatrixXd S = MatrixXd(n_z, n_z);
@@ -319,12 +314,12 @@ void UKF::PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd* z_out, MatrixXd*
         z_col << rho, phi, rho_dot;
         z_temp.col(i) = z_col;
     }
-    z_pred = z_temp * weights;
+    z_pred = z_temp * weights_;
 
     S = MatrixXd::Zero(n_z, n_z);
     for (int i=0; i<2*n_aug_+1; i++)
     {
-        S += weights(i) * (z_temp.col(i) - z_pred) * (z_temp.col(i) - z_pred).transpose();
+        S += weights_(i) * (z_temp.col(i) - z_pred) * (z_temp.col(i) - z_pred).transpose();
     }
 
     R = MatrixXd::Zero(n_z, n_z);
@@ -347,10 +342,6 @@ void UKF::UpdateState(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out)
 {
     int n_z = 3;
     double small = 1.0e-6;
-    VectorXd weights = VectorXd(2*n_aug_+1);
-    weights.fill(0.5/(lambda_ + n_aug_));
-    weights(0)= lambda_/(lambda_ + n_aug_);
-    assert (fabs(weights.sum() - 1.0) < small);
 
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
@@ -364,7 +355,7 @@ void UKF::UpdateState(MatrixXd Xsig_pred, VectorXd* x_out, MatrixXd* P_out)
     Tc = MatrixXd::Zero(n_x_, n_z);
 
 	for (int i=0; i<2*n_aug_+1; i++)
-        Tc += weights(i) * (Xsig_pred.col(i) - x) * (Zsig.col(i) - z_pred).transpose();
+        Tc += weights_(i) * (Xsig_pred.col(i) - x) * (Zsig.col(i) - z_pred).transpose();
 
     std::cout << "---Tc---" << std::endl;
     std::cout << Tc << std::endl;
