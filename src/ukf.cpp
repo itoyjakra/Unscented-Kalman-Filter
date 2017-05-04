@@ -189,3 +189,64 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out)
     //write result
     *Xsig_out = Xsig_aug;
 }
+
+void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double delta_t)
+{
+    double small = 1.0e-6;
+
+    MatrixXd Xsig_pred = MatrixXd(n_x_, 2 * n_aug_ + 1);
+
+    double half_dtsq = 0.5 * delta_t * delta_t;
+
+    double px;
+    double py;
+    double v;
+    double psi;
+    double psi_dot;
+    double nu_a;
+    double nu_psi_dot2;
+
+    VectorXd detrm_col = VectorXd(n_x_);         // deterministic part
+    VectorXd noise_col = VectorXd(n_x_);         // noise part
+
+    for (int i=0; i<2*n_aug_ + 1; i++)
+    {
+        VectorXd col = Xsig_aug.col(i);
+        px = col(0);
+        py = col(1);
+        v = col(2);
+        psi = col(3);
+        psi_dot = col(4);
+        nu_a = col(5);
+        nu_psi_dot2 = col(6);
+
+        if (col(n_x_ - 1) < small)
+        {
+            detrm_col(0) = v * cos(psi) * delta_t;
+            detrm_col(1) = v * sin(psi) * delta_t;
+            detrm_col(2) = 0;
+            detrm_col(3) = 0;
+            detrm_col(4) = 0;
+        }
+        else
+        {
+            detrm_col(0) = v * (sin(psi + psi_dot * delta_t) - sin(psi)) / psi_dot;
+            detrm_col(1) = v * (- cos(psi + psi_dot * delta_t) + cos(psi)) / psi_dot;
+            detrm_col(2) = 0;
+            detrm_col(3) = psi_dot * delta_t;
+            detrm_col(4) = 0;
+        }
+        noise_col << half_dtsq * cos(psi) * nu_a,
+                    half_dtsq * sin(psi) * nu_a,
+                    delta_t * nu_a,
+                    half_dtsq * nu_psi_dot2,
+                    delta_t * nu_psi_dot2;
+
+        Xsig_pred.col(i) = col.head(n_x_) + detrm_col + noise_col;
+    }
+
+    //print result
+    std::cout << "Xsig_pred = " << std::endl << Xsig_pred << std::endl;
+
+    *Xsig_out = Xsig_pred;
+}
