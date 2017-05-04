@@ -75,6 +75,7 @@ class UKF
     void UpdateRadar(MeasurementPackage meas_package);
 
     void GenerateSigmaPoints(MatrixXd* Xsig_out);
+    void SigmaPointPrediction(MatrixXd Xsig_aug, MatrixXd* Xsig_out, double delta_t);
 };
 
 #endif /* UKF_H */
