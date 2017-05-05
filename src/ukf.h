@@ -43,9 +43,12 @@ class UKF
     int n_z_;                       // Measurement dimension for Radar
     double lambda_;                 // Sigma point spreading parameter
 
+<<<<<<< HEAD
     VectorXd z_pred_;               // predicted measurement mean
     MatrixXd S_pred_;               // predicted measurement covariance
 
+=======
+>>>>>>> 530804efc0173f8423173c032ee384a7be3a664d
     double NIS_radar_;              // the current NIS for radar
     double NIS_laser_;              // the current NIS for laser
     
@@ -81,7 +84,11 @@ class UKF
     void GenerateSigmaPoints(MatrixXd* Xsig_out);
     void SigmaPointPrediction(MatrixXd Xsig_out, double delta_t);
     void PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out);
+<<<<<<< HEAD
     void PredictRadarMeasurement();
+=======
+    void PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out);
+>>>>>>> 530804efc0173f8423173c032ee384a7be3a664d
     void UpdateState(VectorXd* x_out, MatrixXd* P_out);
 };
 
