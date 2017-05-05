@@ -174,6 +174,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the radar NIS.
   */
+    VectorXd x_out = VectorXd(n_x_);
+    MatrixXd P_out = MatrixXd(n_x_, n_x_);
+    //MatrixXd Xsig_out = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+    UpdateState(&x_out, &P_out);
+    x_ = x_out;
+    P_ = P_out;
 }
 
 void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) 
