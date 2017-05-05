@@ -24,6 +24,8 @@ UKF::UKF() {
     assert (fabs(weights_.sum() - 1.0) < 1.0e-6);
 
     Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+    z_pred_ = VectorXd(n_z_);
+    S_pred_ = MatrixXd(n_z_, n_z_);
 
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
@@ -142,7 +144,7 @@ void UKF::Prediction(double delta_t)
 
     VectorXd z_out = VectorXd(n_z_);
     MatrixXd S_out = MatrixXd(n_z_, n_z_);
-    PredictRadarMeasurement(&z_out, &S_out);
+    PredictRadarMeasurement();
     std::cout << "step 4" << std::endl;
 }
 
@@ -301,12 +303,10 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
     *P_out = P;
 }
 
-void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out)
+void UKF::PredictRadarMeasurement()
 {
     double small = 1.0e-6;
     MatrixXd Zsig = MatrixXd(n_x_, 2*n_aug_+1);
-    VectorXd z_pred = VectorXd(n_z_);
-    MatrixXd S = MatrixXd(n_z_, n_z_);
 
     MatrixXd R = MatrixXd(n_z_, n_z_);
 
@@ -331,12 +331,12 @@ void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out)
         z_col << rho, phi, rho_dot;
         z_temp.col(i) = z_col;
     }
-    z_pred = z_temp * weights_;
+    z_pred_ = z_temp * weights_;
 
-    S = MatrixXd::Zero(n_z_, n_z_);
+    S_pred_ = MatrixXd::Zero(n_z_, n_z_);
     for (int i=0; i<2*n_aug_+1; i++)
     {
-        S += weights_(i) * (z_temp.col(i) - z_pred) * (z_temp.col(i) - z_pred).transpose();
+        S_pred_ += weights_(i) * (z_temp.col(i) - z_pred_) * (z_temp.col(i) - z_pred_).transpose();
     }
 
     R = MatrixXd::Zero(n_z_, n_z_);
@@ -344,15 +344,12 @@ void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out)
     R(1, 1) = std_radphi_ * std_radphi_;
     R(2, 2) = std_radrd_ * std_radrd_;
 
-    S += R;
+    S_pred_ += R;
 
   //print result
-  std::cout << "z_pred: " << std::endl << z_pred << std::endl;
-  std::cout << "S: " << std::endl << S << std::endl;
+  std::cout << "z_pred: " << std::endl << z_pred_ << std::endl;
+  std::cout << "S: " << std::endl << S_pred_ << std::endl;
 
-  //write result
-  *z_out = z_pred;
-  *S_out = S;
 }
 
 void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
@@ -363,7 +360,6 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
     MatrixXd P = MatrixXd(n_x_, n_x_);
     MatrixXd Zsig = MatrixXd(n_z_, 2 * n_aug_ + 1);
     VectorXd z_pred = VectorXd(n_z_);
-    MatrixXd S = MatrixXd(n_z_, n_z_);
     VectorXd z = VectorXd(n_z_);
     MatrixXd Tc = MatrixXd(n_x_, n_z_);
 
@@ -377,12 +373,12 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
     std::cout << Tc << std::endl;
 
     MatrixXd K = MatrixXd(n_x_, n_z_);
-    K = Tc * S.inverse();
+    K = Tc * S_pred_.inverse();
     std::cout << "---K---" << std::endl;
     std::cout << K << std::endl;
 
     x += K * (z - z_pred);
-    P -= K * S * K.transpose();
+    P -= K * S_pred_ * K.transpose();
 
 
   //print result
