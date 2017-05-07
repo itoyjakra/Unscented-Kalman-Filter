@@ -283,30 +283,27 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
 {
     VectorXd x = VectorXd::Zero(n_x_);
     MatrixXd P = MatrixXd::Zero(n_x_, n_x_);
-    MatrixXd Xsig_temp1 = MatrixXd(Xsig_pred_.rows(), Xsig_pred_.cols());
-    MatrixXd Xsig_temp2 = MatrixXd(Xsig_pred_.rows(), Xsig_pred_.cols());
-
 
     x = Xsig_pred_ * weights_;
 
-    Xsig_temp1 = Xsig_pred_;
-    Xsig_temp1.colwise() -= x; //Xsig_temp1.rowwise().mean();
-    Xsig_temp2 = Xsig_temp1;
-    for (int i=0; i<n_x_; i++)
-        for (int j=0; j<n_cols_sigma_; j++)
-            Xsig_temp2(i, j) *= weights_(j);
-    P = Xsig_temp2 * Xsig_temp1.transpose();
+	for (int i=0; i<n_cols_sigma_; i++)
+    {
+        VectorXd x_diff = Xsig_pred_.col(i) - x;
+        while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
+        while (x_diff(3) < M_PI) x_diff(3) += 2 * M_PI;
 
+        P += weights_(i) * x_diff * x_diff.transpose();
+    }
 
     *x_out = x;
     *P_out = P;
-    //
-  //print result
-  std::cout << "In PredictMeanAndCovariance..." << std::endl;
+
+    std::cout << "In PredictMeanAndCovariance..." << std::endl;
     std::cout << "Predicted state" << std::endl;
     std::cout << x << std::endl;
     std::cout << "Predicted covariance matrix" << std::endl;
     std::cout << P << std::endl;
+
 }
 
 void UKF::PredictRadarMeasurement()
