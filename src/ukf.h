@@ -46,6 +46,7 @@ class UKF
 
     VectorXd z_pred_;               // predicted measurement mean
     MatrixXd S_pred_;               // predicted measurement covariance
+    MatrixXd Zsig_;                 // measurement sigma matrix
 
     double NIS_radar_;              // the current NIS for radar
     double NIS_laser_;              // the current NIS for laser

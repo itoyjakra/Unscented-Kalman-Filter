@@ -27,6 +27,7 @@ UKF::UKF() {
     Xsig_pred_ = MatrixXd::Zero(n_x_, n_cols_sigma_);
     z_pred_ = VectorXd(n_z_);
     S_pred_ = MatrixXd(n_z_, n_z_);
+    Zsig_ = MatrixXd::Zero(n_z_, n_cols_sigma_);
 
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
@@ -309,12 +310,10 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
 void UKF::PredictRadarMeasurement()
 {
     double small = 1.0e-6;
-    MatrixXd Zsig = MatrixXd(n_x_, n_cols_sigma_);
 
     MatrixXd R = MatrixXd(n_z_, n_z_);
 
     double px, py, v, psi, psi_dot, rho, phi, rho_dot;
-    MatrixXd z_temp = MatrixXd(n_z_, n_cols_sigma_);
     VectorXd z_col = VectorXd(n_z_);
     for (int i=0; i<n_cols_sigma_; i++)
     {
@@ -332,14 +331,14 @@ void UKF::PredictRadarMeasurement()
             rho_dot = v * (px * cos(psi) + py * sin(psi)) / rho;
 
         z_col << rho, phi, rho_dot;
-        z_temp.col(i) = z_col;
+        Zsig_.col(i) = z_col;
     }
-    z_pred_ = z_temp * weights_;
+    z_pred_ = Zsig_ * weights_;
 
     S_pred_ = MatrixXd::Zero(n_z_, n_z_);
     for (int i=0; i<n_cols_sigma_; i++)
     {
-        S_pred_ += weights_(i) * (z_temp.col(i) - z_pred_) * (z_temp.col(i) - z_pred_).transpose();
+        S_pred_ += weights_(i) * (Zsig_.col(i) - z_pred_) * (Zsig_.col(i) - z_pred_).transpose();
     }
 
     R = MatrixXd::Zero(n_z_, n_z_);
@@ -350,6 +349,7 @@ void UKF::PredictRadarMeasurement()
     S_pred_ += R;
 
   //print result
+    std::cout << "In PredictRadarMeasurement..." << std::endl;
   std::cout << "z_pred: " << std::endl << z_pred_ << std::endl;
   std::cout << "S: " << std::endl << S_pred_ << std::endl;
 
@@ -361,8 +361,6 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
 
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
-    MatrixXd Zsig = MatrixXd(n_z_, 2 * n_aug_ + 1);
-    VectorXd z_pred = VectorXd(n_z_);
     VectorXd z = VectorXd(n_z_);
     MatrixXd Tc = MatrixXd(n_x_, n_z_);
 
@@ -370,7 +368,7 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
     Tc = MatrixXd::Zero(n_x_, n_z_);
 
 	for (int i=0; i<n_cols_sigma_; i++)
-        Tc += weights_(i) * (Xsig_pred_.col(i) - x_) * (Zsig.col(i) - z_pred_).transpose();
+        Tc += weights_(i) * (Xsig_pred_.col(i) - x_) * (Zsig_.col(i) - z_pred_).transpose();
 
     std::cout << "---Tc---" << std::endl;
     std::cout << Tc << std::endl;
@@ -380,7 +378,7 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
     std::cout << "---K---" << std::endl;
     std::cout << K << std::endl;
 
-    x += K * (z - z_pred);
+    x += K * (z - z_pred_);
     P -= K * S_pred_ * K.transpose();
 
 
@@ -391,7 +389,6 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
   //write result
   *x_out = x;
   *P_out = P;
-
 
 }
 // TODO force psi within (-pi, pi) range
