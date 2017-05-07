@@ -169,7 +169,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  * Updates the state and the state covariance matrix using a radar measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateRadar(MeasurementPackage meas_package) {
+void UKF::UpdateRadar(MeasurementPackage meas_package) 
+{
   /**
   TODO:
 
@@ -181,7 +182,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     VectorXd x_out = VectorXd(n_x_);
     MatrixXd P_out = MatrixXd(n_x_, n_x_);
     //MatrixXd Xsig_out = MatrixXd(n_aug_, 2 * n_aug_ + 1);
-    UpdateState(&x_out, &P_out);
+    UpdateState(&x_out, &P_out, meas_package.raw_measurements_);
     x_ = x_out;
     P_ = P_out;
 }
@@ -355,13 +356,12 @@ void UKF::PredictRadarMeasurement()
 
 }
 
-void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out)
+void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 {
     double small = 1.0e-6;
 
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
-    VectorXd z = VectorXd(n_z_);
     MatrixXd Tc = MatrixXd(n_x_, n_z_);
 
 
