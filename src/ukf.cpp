@@ -8,9 +8,6 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-/**
- * Initializes Unscented Kalman filter
- */
 UKF::UKF() {
     n_x_ = 5;
     n_aug_ = 7;
@@ -29,35 +26,24 @@ UKF::UKF() {
     S_pred_ = MatrixXd(n_z_, n_z_);
     Zsig_ = MatrixXd::Zero(n_z_, n_cols_sigma_);
 
-  // if this is false, laser measurements will be ignored (except during init)
-  use_laser_ = true;
+    use_laser_ = false;
+    use_radar_ = true;
 
-  // if this is false, radar measurements will be ignored (except during init)
-  use_radar_ = true;
+    x_ = VectorXd(n_x_);        // state vector
+    P_ = MatrixXd(n_x_, n_x_);  // state covariance matrix
 
-  x_ = VectorXd(n_x_); // state vector
-  P_ = MatrixXd(n_x_, n_x_); // state covariance matrix
+    // Process noise standard deviation
+    std_a_ = 0.1;               // longitudinal accereration
+    std_yawdd_ = 0.1;           // yaw acceleration
 
-  // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.1; //30;
+    // Laser measurement noise standard deviation
+    std_laspx_ = 0.15;          // position 1
+    std_laspy_ = 0.15;          // position 2
 
-  // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.1; //30;
-
-  // Laser measurement noise standard deviation position1 in m
-  std_laspx_ = 0.15;
-
-  // Laser measurement noise standard deviation position2 in m
-  std_laspy_ = 0.15;
-
-  // Radar measurement noise standard deviation radius in m
-  std_radr_ = 0.3;
-
-  // Radar measurement noise standard deviation angle in rad
-  std_radphi_ = 0.03;
-
-  // Radar measurement noise standard deviation radius change in m/s
-  std_radrd_ = 0.3;
+    // Radar measurement noise standard deviation radius in m
+    std_radr_ = 0.3;            // radius
+    std_radphi_ = 0.03;         // angle 
+    std_radrd_ = 0.3;           // rate of change of radius
 
   /**
   TODO:
@@ -111,9 +97,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
     previous_timestamp_ = meas_package.timestamp_;
 
     Prediction(dt);
-    if (meas_package.sensor_type_ == MeasurementPackage::LASER)
+    if ((meas_package.sensor_type_ == MeasurementPackage::LASER) & use_laser_)
         UpdateLidar(meas_package);
-    else if (meas_package.sensor_type_ == MeasurementPackage::RADAR)
+    else if ((meas_package.sensor_type_ == MeasurementPackage::RADAR) & use_radar_)
         UpdateRadar(meas_package);
 }
 
