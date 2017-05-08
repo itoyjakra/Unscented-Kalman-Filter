@@ -93,7 +93,7 @@ class UKF
     void PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out);
     void PredictRadarMeasurement();
     void PredictLidarMeasurement();
-    void UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z);
+    void UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z);
 };
 
 #endif /* UKF_H */

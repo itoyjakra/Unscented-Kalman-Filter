@@ -180,7 +180,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
   */
     VectorXd x_out = VectorXd(n_x_);
     MatrixXd P_out = MatrixXd(n_x_, n_x_);
-    UpdateState(&x_out, &P_out, meas_package.raw_measurements_);
+    UpdateState_Radar(&x_out, &P_out, meas_package.raw_measurements_);
     x_ = x_out;
     P_ = P_out;
 }
@@ -397,7 +397,7 @@ void UKF::PredictRadarMeasurement()
 
 }
 
-void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
+void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 {
     double small = 1.0e-6;
 
