@@ -9,6 +9,7 @@ using Eigen::VectorXd;
 using std::vector;
 
 UKF::UKF() {
+    is_initialized_ = false;
     n_x_ = 5;
     n_aug_ = 7;
     n_z_ = 3;
@@ -31,6 +32,9 @@ UKF::UKF() {
 
     x_ = VectorXd(n_x_);        // state vector
     P_ = MatrixXd(n_x_, n_x_);  // state covariance matrix
+
+    x_pred_ = VectorXd(n_x_);        // predicted state vector
+    P_pred_ = MatrixXd(n_x_, n_x_);  // predicted state covariance matrix
 
     // Process noise standard deviation
     std_a_ = 0.1;               // longitudinal accereration
@@ -118,16 +122,21 @@ void UKF::Prediction(double delta_t)
   */
     MatrixXd Xsig_out = MatrixXd(n_aug_, n_cols_sigma_);
     GenerateSigmaPoints(&Xsig_out);
+
     std::cout << "step 1" << std::endl;
     std::cout << Xsig_out.rows() << std::endl;
     std::cout << Xsig_out.cols() << std::endl;
     //MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+    
     SigmaPointPrediction(Xsig_out, delta_t);
     std::cout << "step 2" << std::endl;
 
     VectorXd x_out = VectorXd(n_x_);
     MatrixXd P_out = MatrixXd(n_x_, n_x_);
     PredictMeanAndCovariance(&x_out, &P_out);
+    x_pred_ = x_out;
+    P_pred_ = P_out;
+
     std::cout << "step 3" << std::endl;
 
     VectorXd z_out = VectorXd(n_z_);
@@ -167,7 +176,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
   */
     VectorXd x_out = VectorXd(n_x_);
     MatrixXd P_out = MatrixXd(n_x_, n_x_);
-    //MatrixXd Xsig_out = MatrixXd(n_aug_, 2 * n_aug_ + 1);
     UpdateState(&x_out, &P_out, meas_package.raw_measurements_);
     x_ = x_out;
     P_ = P_out;
@@ -184,11 +192,9 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out)
     //create sigma point matrix
     MatrixXd Xsig_aug = MatrixXd::Zero(n_aug_, n_cols_sigma_);
 
-//x_aug = VectorXd::Zero(n_aug_);
     x_aug.head(n_x_) = x_;
     Xsig_aug.col(0) = x_aug;
 
-    //P_aug = MatrixXd(n_aug_, n_aug_);
     P_aug.topLeftCorner(n_x_, n_x_) = P_;
     MatrixXd Noise = MatrixXd(2, 2);
     Noise << std_a_ * std_a_, 0, 0, std_yawdd_ * std_yawdd_;
@@ -238,7 +244,7 @@ void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, double delta_t)
         nu_a = col(5);
         nu_psi_dot2 = col(6);
 
-        if (col(n_x_ - 1) < small)
+        if (fabs(psi_dot) < small)
         {
             detrm_col(0) = v * cos(psi) * delta_t;
             detrm_col(1) = v * sin(psi) * delta_t;
@@ -325,7 +331,11 @@ void UKF::PredictRadarMeasurement()
     S_pred_ = MatrixXd::Zero(n_z_, n_z_);
     for (int i=0; i<n_cols_sigma_; i++)
     {
-        S_pred_ += weights_(i) * (Zsig_.col(i) - z_pred_) * (Zsig_.col(i) - z_pred_).transpose();
+        VectorXd Z_diff = Zsig_.col(i) - z_pred_;
+        while (Z_diff(1) > M_PI) Z_diff(1) -= 2 * M_PI;
+        while (Z_diff(1) < M_PI) Z_diff(1) += 2 * M_PI;
+        S_pred_ += weights_(i) * Z_diff * Z_diff.transpose();
+        //S_pred_ += weights_(i) * (Zsig_.col(i) - z_pred_) * (Zsig_.col(i) - z_pred_).transpose();
     }
 
     R = MatrixXd::Zero(n_z_, n_z_);
@@ -364,9 +374,11 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     std::cout << "---K---" << std::endl;
     std::cout << K << std::endl;
 
-    x += K * (z - z_pred_);
-    P -= K * S_pred_ * K.transpose();
+    //x += K * (z - z_pred_);
+    //P -= K * S_pred_ * K.transpose();
 
+    x = x_pred_ + K * (z - z_pred_);
+    P = P_pred_ - K * S_pred_ * K.transpose();
 
   //print result
   std::cout << "Updated state x: " << std::endl << x << std::endl;
@@ -375,6 +387,5 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
   //write result
   *x_out = x;
   *P_out = P;
-
 }
 // TODO force psi within (-pi, pi) range

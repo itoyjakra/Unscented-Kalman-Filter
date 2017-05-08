@@ -24,6 +24,9 @@ class UKF
     VectorXd x_;                    // state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
     MatrixXd P_;                    // state covariance matrix
 
+    VectorXd x_pred_;               // predicted state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
+    MatrixXd P_pred_;               // predicted state covariance matrix
+
     MatrixXd Xsig_pred_;            // predicted sigma points matrix
     VectorXd weights_;              // Weights of sigma points
 
