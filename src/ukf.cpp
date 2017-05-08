@@ -31,7 +31,7 @@ UKF::UKF() {
     S_laser_pred_ = MatrixXd(n_z_laser_, n_z_laser_);
     Zsig_laser_ = MatrixXd::Zero(n_z_laser_, n_cols_sigma_);
 
-    use_laser_ = false;
+    use_laser_ = true;
     use_radar_ = true;
 
     x_ = VectorXd(n_x_);        // state vector
@@ -104,11 +104,17 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
     double dt = (meas_package.timestamp_ - previous_timestamp_) / 1000000.0;	
     previous_timestamp_ = meas_package.timestamp_;
 
-    Prediction(dt);
+    //Prediction(dt);
     if ((meas_package.sensor_type_ == MeasurementPackage::LASER) & use_laser_)
-        UpdateLidar(meas_package);
+    {
+        Prediction(dt, meas_package.sensor_type_);
+        Update(meas_package);
+    }
     else if ((meas_package.sensor_type_ == MeasurementPackage::RADAR) & use_radar_)
-        UpdateRadar(meas_package);
+    {
+        Prediction(dt, meas_package.sensor_type_);
+        Update(meas_package);
+    }
 }
 
 /**
@@ -116,7 +122,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
  * @param {double} delta_t the change in time (in seconds) between the last
  * measurement and this one.
  */
-void UKF::Prediction(double delta_t) 
+void UKF::Prediction(double delta_t, int sensor_type) 
 {
   /**
   TODO:
@@ -143,9 +149,14 @@ void UKF::Prediction(double delta_t)
 
     std::cout << "step 3" << std::endl;
 
-    VectorXd z_out = VectorXd(n_z_);
-    MatrixXd S_out = MatrixXd(n_z_, n_z_);
-    PredictRadarMeasurement();
+    std::cout << "sensor_type = " << sensor_type << std::endl;
+    if (sensor_type == 1)
+        PredictRadarMeasurement();
+    else if (sensor_type == 0)
+        PredictLidarMeasurement();
+    //VectorXd z_out = VectorXd(n_z_);
+    //MatrixXd S_out = MatrixXd(n_z_, n_z_);
+    //PredictRadarMeasurement();
     std::cout << "step 4" << std::endl;
 }
 
@@ -181,6 +192,18 @@ void UKF::UpdateRadar(MeasurementPackage meas_package)
     VectorXd x_out = VectorXd(n_x_);
     MatrixXd P_out = MatrixXd(n_x_, n_x_);
     UpdateState_Radar(&x_out, &P_out, meas_package.raw_measurements_);
+    x_ = x_out;
+    P_ = P_out;
+}
+
+void UKF::Update(MeasurementPackage meas_package)
+{
+    VectorXd x_out = VectorXd(n_x_);
+    MatrixXd P_out = MatrixXd(n_x_, n_x_);
+    if (meas_package.sensor_type_ == MeasurementPackage::LASER)
+        UpdateState_Lidar(&x_out, &P_out, meas_package.raw_measurements_);
+    else if (meas_package.sensor_type_ == MeasurementPackage::RADAR)
+        UpdateState_Radar(&x_out, &P_out, meas_package.raw_measurements_);
     x_ = x_out;
     P_ = P_out;
 }
@@ -397,6 +420,52 @@ void UKF::PredictRadarMeasurement()
 
 }
 
+void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
+{
+    double small = 1.0e-6;
+
+    VectorXd x = VectorXd(n_x_);
+    MatrixXd P = MatrixXd(n_x_, n_x_);
+    MatrixXd Tc = MatrixXd(n_x_, n_z_laser_);
+
+
+    Tc = MatrixXd::Zero(n_x_, n_z_laser_);
+
+	for (int i=0; i<n_cols_sigma_; i++)
+    {
+        VectorXd z_diff = Zsig_laser_.col(i) - z_laser_pred_;
+
+        VectorXd x_diff = Xsig_pred_.col(i) - x_pred_;
+        while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
+        while (x_diff(3) < -M_PI) x_diff(3) += 2 * M_PI;
+
+        Tc += weights_(i) * x_diff * z_diff.transpose();
+    }
+
+    std::cout << "---Tc---" << std::endl;
+    std::cout << Tc << std::endl;
+
+    MatrixXd K = MatrixXd(n_x_, n_z_laser_);
+    K = Tc * S_laser_pred_.inverse();
+    std::cout << "---K---" << std::endl;
+    std::cout << K << std::endl;
+
+    VectorXd z_diff = z - z_laser_pred_;
+    x = x_pred_ + K * z_diff;
+    P = P_pred_ - K * S_laser_pred_ * K.transpose();
+
+    while (x(3) > M_PI) x(3) -= 2 * M_PI;
+    while (x(3) < -M_PI) x(3) += 2 * M_PI;
+    assert (fabs(x(3) < M_PI));
+
+  //print result
+  std::cout << "Updated state x: " << std::endl << x << std::endl;
+  std::cout << "Updated state covariance P: " << std::endl << P << std::endl;
+
+    *x_out = x;
+    *P_out = P;
+}
+
 void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 {
     double small = 1.0e-6;
@@ -449,4 +518,3 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     *x_out = x;
     *P_out = P;
 }
-// TODO force psi within (-pi, pi) range

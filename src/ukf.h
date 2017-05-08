@@ -74,7 +74,7 @@ class UKF
     * matrix
     * @param delta_t Time between k and k+1 in s
     */
-    void Prediction(double delta_t);
+    // void Prediction(double delta_t);
 
     /**
     * Updates the state and the state covariance matrix using a laser measurement
@@ -90,10 +90,13 @@ class UKF
 
     void GenerateSigmaPoints(MatrixXd* Xsig_out);
     void SigmaPointPrediction(MatrixXd Xsig_out, double delta_t);
+    void Prediction(double delta_t, int sensor_type) ;
     void PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out);
     void PredictRadarMeasurement();
     void PredictLidarMeasurement();
     void UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z);
+    void UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z);
+    void Update(MeasurementPackage meas_package);
 };
 
 #endif /* UKF_H */
