@@ -13,6 +13,7 @@ UKF::UKF() {
     n_x_ = 5;
     n_aug_ = 7;
     n_z_ = 3;
+    n_z_laser_ = 2;
     lambda_ = 3 - n_aug_;
     previous_timestamp_ = 0;
     n_cols_sigma_ = 2 * n_aug_ + 1;
@@ -26,6 +27,9 @@ UKF::UKF() {
     z_pred_ = VectorXd(n_z_);
     S_pred_ = MatrixXd(n_z_, n_z_);
     Zsig_ = MatrixXd::Zero(n_z_, n_cols_sigma_);
+    z_laser_pred_ = VectorXd(n_z_laser_);
+    S_laser_pred_ = MatrixXd(n_z_laser_, n_z_laser_);
+    Zsig_laser_ = MatrixXd::Zero(n_z_laser_, n_cols_sigma_);
 
     use_laser_ = false;
     use_radar_ = true;
@@ -297,6 +301,47 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
     std::cout << x << std::endl;
     std::cout << "Predicted covariance matrix" << std::endl;
     std::cout << P << std::endl;
+
+}
+
+void UKF::PredictLidarMeasurement()
+{
+    double small = 1.0e-6;
+
+    MatrixXd R = MatrixXd(n_z_laser_, n_z_laser_);
+
+    double px, py, v, psi, psi_dot, rho, phi, rho_dot;
+    VectorXd z_col = VectorXd(n_z_laser_);
+    for (int i=0; i<n_cols_sigma_; i++)
+    {
+        px = Xsig_pred_(0, i);
+        py = Xsig_pred_(1, i);
+        v = Xsig_pred_(2, i);
+        psi = Xsig_pred_(3, i);
+        psi_dot = Xsig_pred_(4, i);
+
+        z_col << px, py;
+        Zsig_laser_.col(i) = z_col;
+    }
+    z_laser_pred_ = Zsig_laser_ * weights_;
+
+    S_laser_pred_ = MatrixXd::Zero(n_z_laser_, n_z_laser_);
+    for (int i=0; i<n_cols_sigma_; i++)
+    {
+        VectorXd Z_diff = Zsig_laser_.col(i) - z_laser_pred_;
+        S_laser_pred_ += weights_(i) * Z_diff * Z_diff.transpose();
+    }
+
+    R = MatrixXd::Zero(n_z_laser_, n_z_laser_);
+    R(0, 0) = std_laspx_ * std_laspx_;
+    R(1, 1) = std_laspy_ * std_laspy_;
+
+    S_laser_pred_ += R;
+
+  //print result
+    std::cout << "In PredictLaserMeasurement..." << std::endl;
+  std::cout << "z_pred: " << std::endl << z_laser_pred_ << std::endl;
+  std::cout << "S: " << std::endl << S_laser_pred_ << std::endl;
 
 }
 
