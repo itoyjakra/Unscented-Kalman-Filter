@@ -364,7 +364,17 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     Tc = MatrixXd::Zero(n_x_, n_z_);
 
 	for (int i=0; i<n_cols_sigma_; i++)
-        Tc += weights_(i) * (Xsig_pred_.col(i) - x_) * (Zsig_.col(i) - z_pred_).transpose();
+    {
+        VectorXd z_diff = Zsig_.col(i) - z_pred_;
+        while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
+        while (z_diff(1) < M_PI) z_diff(1) += 2 * M_PI;
+
+        VectorXd x_diff = Xsig_pred_.col(i) - x_pred_;
+        while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
+        while (x_diff(3) < M_PI) x_diff(3) += 2 * M_PI;
+
+        Tc += weights_(i) * x_diff * z_diff.transpose();
+    }
 
     std::cout << "---Tc---" << std::endl;
     std::cout << Tc << std::endl;
@@ -377,15 +387,17 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     //x += K * (z - z_pred_);
     //P -= K * S_pred_ * K.transpose();
 
-    x = x_pred_ + K * (z - z_pred_);
+    VectorXd z_diff = z - z_pred_;
+    while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
+    while (z_diff(1) < M_PI) z_diff(1) += 2 * M_PI;
+    x = x_pred_ + K * z_diff;
     P = P_pred_ - K * S_pred_ * K.transpose();
 
   //print result
   std::cout << "Updated state x: " << std::endl << x << std::endl;
   std::cout << "Updated state covariance P: " << std::endl << P << std::endl;
 
-  //write result
-  *x_out = x;
-  *P_out = P;
+    *x_out = x;
+    *P_out = P;
 }
 // TODO force psi within (-pi, pi) range
