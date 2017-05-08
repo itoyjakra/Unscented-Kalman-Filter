@@ -284,7 +284,7 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
     {
         VectorXd x_diff = Xsig_pred_.col(i) - x;
         while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
-        while (x_diff(3) < M_PI) x_diff(3) += 2 * M_PI;
+        while (x_diff(3) < -M_PI) x_diff(3) += 2 * M_PI;
 
         P += weights_(i) * x_diff * x_diff.transpose();
     }
@@ -333,7 +333,7 @@ void UKF::PredictRadarMeasurement()
     {
         VectorXd Z_diff = Zsig_.col(i) - z_pred_;
         while (Z_diff(1) > M_PI) Z_diff(1) -= 2 * M_PI;
-        while (Z_diff(1) < M_PI) Z_diff(1) += 2 * M_PI;
+        while (Z_diff(1) < -M_PI) Z_diff(1) += 2 * M_PI;
         S_pred_ += weights_(i) * Z_diff * Z_diff.transpose();
         //S_pred_ += weights_(i) * (Zsig_.col(i) - z_pred_) * (Zsig_.col(i) - z_pred_).transpose();
     }
@@ -367,11 +367,11 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     {
         VectorXd z_diff = Zsig_.col(i) - z_pred_;
         while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
-        while (z_diff(1) < M_PI) z_diff(1) += 2 * M_PI;
+        while (z_diff(1) < -M_PI) z_diff(1) += 2 * M_PI;
 
         VectorXd x_diff = Xsig_pred_.col(i) - x_pred_;
         while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
-        while (x_diff(3) < M_PI) x_diff(3) += 2 * M_PI;
+        while (x_diff(3) < -M_PI) x_diff(3) += 2 * M_PI;
 
         Tc += weights_(i) * x_diff * z_diff.transpose();
     }
@@ -389,9 +389,13 @@ void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 
     VectorXd z_diff = z - z_pred_;
     while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
-    while (z_diff(1) < M_PI) z_diff(1) += 2 * M_PI;
+    while (z_diff(1) < -M_PI) z_diff(1) += 2 * M_PI;
     x = x_pred_ + K * z_diff;
     P = P_pred_ - K * S_pred_ * K.transpose();
+
+    while (x(3) > M_PI) x(3) -= 2 * M_PI;
+    while (x(3) < -M_PI) x(3) += 2 * M_PI;
+    assert (fabs(x(3) < M_PI));
 
   //print result
   std::cout << "Updated state x: " << std::endl << x << std::endl;

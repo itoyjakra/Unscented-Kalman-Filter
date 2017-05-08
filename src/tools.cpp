@@ -26,9 +26,41 @@ VectorXd Tools::PolarToCart(const VectorXd& polar)
 }
 
 VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
-                              const vector<VectorXd> &ground_truth) {
+                              const vector<VectorXd> &ground_truth) 
+{
+  VectorXd rmse(4);
+  rmse << 0,0,0,0;
+  VectorXd c;
+
+  if (estimations.size() != ground_truth.size())
+  {
+    throw "lengths of vectors are different for RMSE calculations";
+  }
+  else if (estimations.size() == 0)
+  {
+    throw "estimate is unavailable";
+  }
+  else if (ground_truth.size() == 0)
+  {
+    throw "ground truth is unavailable";
+  }
+  else
+  {
+    for (int i=0; i<estimations.size(); i++)
+    {
+      c = estimations[i] - ground_truth[i];
+      rmse.array() = rmse.array() + c.array() * c.array();
+    }
+  }
+  rmse = rmse / estimations.size();
+  rmse = sqrt(rmse.array());
+
+  return rmse;
+}
+
   /**
+VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
+                              const vector<VectorXd> &ground_truth) {
   TODO:
     * Calculate the RMSE here.
   */
-}
