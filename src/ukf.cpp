@@ -219,9 +219,7 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
 	for (int i=0; i<n_cols_sigma_; i++)
     {
         VectorXd x_diff = Xsig_pred_.col(i) - x;
-        while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
-        while (x_diff(3) < -M_PI) x_diff(3) += 2 * M_PI;
-
+        x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
         P += weights_(i) * x_diff * x_diff.transpose();
     }
 
@@ -298,8 +296,7 @@ void UKF::PredictRadarMeasurement()
     for (int i=0; i<n_cols_sigma_; i++)
     {
         VectorXd Z_diff = Zsig_radar_.col(i) - z_radar_pred_;
-        while (Z_diff(1) > M_PI) Z_diff(1) -= 2 * M_PI;
-        while (Z_diff(1) < -M_PI) Z_diff(1) += 2 * M_PI;
+        Z_diff(1) = atan2(sin(Z_diff(1)), cos(Z_diff(1)));
         S_radar_pred_ += weights_(i) * Z_diff * Z_diff.transpose();
     }
 
@@ -328,8 +325,7 @@ void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
         VectorXd z_diff = Zsig_laser_.col(i) - z_laser_pred_;
 
         VectorXd x_diff = Xsig_pred_.col(i) - x_pred_;
-        while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
-        while (x_diff(3) < -M_PI) x_diff(3) += 2 * M_PI;
+        x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
 
         Tc += weights_(i) * x_diff * z_diff.transpose();
     }
@@ -341,8 +337,7 @@ void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     x = x_pred_ + K * z_diff;
     P = P_pred_ - K * S_laser_pred_ * K.transpose();
 
-    while (x(3) > M_PI) x(3) -= 2 * M_PI;
-    while (x(3) < -M_PI) x(3) += 2 * M_PI;
+    x(3) = atan2(sin(x(3)), cos(x(3)));
     assert (fabs(x(3) < M_PI));
 
     *x_out = x;
@@ -363,12 +358,10 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 	for (int i=0; i<n_cols_sigma_; i++)
     {
         VectorXd z_diff = Zsig_radar_.col(i) - z_radar_pred_;
-        while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
-        while (z_diff(1) < -M_PI) z_diff(1) += 2 * M_PI;
+        z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
 
         VectorXd x_diff = Xsig_pred_.col(i) - x_pred_;
-        while (x_diff(3) > M_PI) x_diff(3) -= 2 * M_PI;
-        while (x_diff(3) < -M_PI) x_diff(3) += 2 * M_PI;
+        x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
 
         Tc += weights_(i) * x_diff * z_diff.transpose();
     }
@@ -377,13 +370,12 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     K = Tc * S_radar_pred_.inverse();
 
     VectorXd z_diff = z - z_radar_pred_;
-    while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
-    while (z_diff(1) < -M_PI) z_diff(1) += 2 * M_PI;
+    z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
+
     x = x_pred_ + K * z_diff;
     P = P_pred_ - K * S_radar_pred_ * K.transpose();
 
-    while (x(3) > M_PI) x(3) -= 2 * M_PI;
-    while (x(3) < -M_PI) x(3) += 2 * M_PI;
+    x(3) = atan2(sin(x(3)), cos(x(3)));
     assert (fabs(x(3) < M_PI));
 
     *x_out = x;
