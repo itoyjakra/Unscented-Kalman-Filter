@@ -12,7 +12,7 @@ UKF::UKF() {
     is_initialized_ = false;
     n_x_ = 5;
     n_aug_ = 7;
-    n_z_ = 3;
+    n_z_radar_ = 3;
     n_z_laser_ = 2;
     lambda_ = 3 - n_aug_;
     previous_timestamp_ = 0;
@@ -24,9 +24,9 @@ UKF::UKF() {
     assert (fabs(weights_.sum() - 1.0) < 1.0e-6);
 
     Xsig_pred_ = MatrixXd::Zero(n_x_, n_cols_sigma_);
-    z_pred_ = VectorXd(n_z_);
-    S_pred_ = MatrixXd(n_z_, n_z_);
-    Zsig_ = MatrixXd::Zero(n_z_, n_cols_sigma_);
+    z_radar_pred_ = VectorXd(n_z_radar_);
+    S_radar_pred_ = MatrixXd(n_z_radar_, n_z_radar_);
+    Zsig_radar_ = MatrixXd::Zero(n_z_radar_, n_cols_sigma_);
     z_laser_pred_ = VectorXd(n_z_laser_);
     S_laser_pred_ = MatrixXd(n_z_laser_, n_z_laser_);
     Zsig_laser_ = MatrixXd::Zero(n_z_laser_, n_cols_sigma_);
@@ -154,8 +154,8 @@ void UKF::Prediction(double delta_t, int sensor_type)
         PredictRadarMeasurement();
     else if (sensor_type == 0)
         PredictLidarMeasurement();
-    //VectorXd z_out = VectorXd(n_z_);
-    //MatrixXd S_out = MatrixXd(n_z_, n_z_);
+    //VectorXd z_out = VectorXd(n_z_radar_);
+    //MatrixXd S_out = MatrixXd(n_z_radar_, n_z_radar_);
     //PredictRadarMeasurement();
     std::cout << "step 4" << std::endl;
 }
@@ -372,10 +372,10 @@ void UKF::PredictRadarMeasurement()
 {
     double small = 1.0e-6;
 
-    MatrixXd R = MatrixXd(n_z_, n_z_);
+    MatrixXd R = MatrixXd(n_z_radar_, n_z_radar_);
 
     double px, py, v, psi, psi_dot, rho, phi, rho_dot;
-    VectorXd z_col = VectorXd(n_z_);
+    VectorXd z_col = VectorXd(n_z_radar_);
     for (int i=0; i<n_cols_sigma_; i++)
     {
         px = Xsig_pred_(0, i);
@@ -392,31 +392,31 @@ void UKF::PredictRadarMeasurement()
             rho_dot = v * (px * cos(psi) + py * sin(psi)) / rho;
 
         z_col << rho, phi, rho_dot;
-        Zsig_.col(i) = z_col;
+        Zsig_radar_.col(i) = z_col;
     }
-    z_pred_ = Zsig_ * weights_;
+    z_radar_pred_ = Zsig_radar_ * weights_;
 
-    S_pred_ = MatrixXd::Zero(n_z_, n_z_);
+    S_radar_pred_ = MatrixXd::Zero(n_z_radar_, n_z_radar_);
     for (int i=0; i<n_cols_sigma_; i++)
     {
-        VectorXd Z_diff = Zsig_.col(i) - z_pred_;
+        VectorXd Z_diff = Zsig_radar_.col(i) - z_radar_pred_;
         while (Z_diff(1) > M_PI) Z_diff(1) -= 2 * M_PI;
         while (Z_diff(1) < -M_PI) Z_diff(1) += 2 * M_PI;
-        S_pred_ += weights_(i) * Z_diff * Z_diff.transpose();
+        S_radar_pred_ += weights_(i) * Z_diff * Z_diff.transpose();
         //S_pred_ += weights_(i) * (Zsig_.col(i) - z_pred_) * (Zsig_.col(i) - z_pred_).transpose();
     }
 
-    R = MatrixXd::Zero(n_z_, n_z_);
+    R = MatrixXd::Zero(n_z_radar_, n_z_radar_);
     R(0, 0) = std_radr_ * std_radr_;
     R(1, 1) = std_radphi_ * std_radphi_;
     R(2, 2) = std_radrd_ * std_radrd_;
 
-    S_pred_ += R;
+    S_radar_pred_ += R;
 
   //print result
     std::cout << "In PredictRadarMeasurement..." << std::endl;
-  std::cout << "z_pred: " << std::endl << z_pred_ << std::endl;
-  std::cout << "S: " << std::endl << S_pred_ << std::endl;
+  std::cout << "z_pred: " << std::endl << z_radar_pred_ << std::endl;
+  std::cout << "S: " << std::endl << S_radar_pred_ << std::endl;
 
 }
 
@@ -472,14 +472,14 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
-    MatrixXd Tc = MatrixXd(n_x_, n_z_);
+    MatrixXd Tc = MatrixXd(n_x_, n_z_radar_);
 
 
-    Tc = MatrixXd::Zero(n_x_, n_z_);
+    Tc = MatrixXd::Zero(n_x_, n_z_radar_);
 
 	for (int i=0; i<n_cols_sigma_; i++)
     {
-        VectorXd z_diff = Zsig_.col(i) - z_pred_;
+        VectorXd z_diff = Zsig_radar_.col(i) - z_radar_pred_;
         while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
         while (z_diff(1) < -M_PI) z_diff(1) += 2 * M_PI;
 
@@ -493,19 +493,19 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     std::cout << "---Tc---" << std::endl;
     std::cout << Tc << std::endl;
 
-    MatrixXd K = MatrixXd(n_x_, n_z_);
-    K = Tc * S_pred_.inverse();
+    MatrixXd K = MatrixXd(n_x_, n_z_radar_);
+    K = Tc * S_radar_pred_.inverse();
     std::cout << "---K---" << std::endl;
     std::cout << K << std::endl;
 
-    //x += K * (z - z_pred_);
+    //x += K * (z - z_radar_pred_);
     //P -= K * S_pred_ * K.transpose();
 
-    VectorXd z_diff = z - z_pred_;
+    VectorXd z_diff = z - z_radar_pred_;
     while (z_diff(1) > M_PI) z_diff(1) -= 2 * M_PI;
     while (z_diff(1) < -M_PI) z_diff(1) += 2 * M_PI;
     x = x_pred_ + K * z_diff;
-    P = P_pred_ - K * S_pred_ * K.transpose();
+    P = P_pred_ - K * S_radar_pred_ * K.transpose();
 
     while (x(3) > M_PI) x(3) -= 2 * M_PI;
     while (x(3) < -M_PI) x(3) += 2 * M_PI;

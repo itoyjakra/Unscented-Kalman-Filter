@@ -43,14 +43,14 @@ class UKF
 
     int n_x_;                       // State dimension
     int n_aug_;                     // Augmented state dimension
-    int n_z_;                       // Measurement dimension for Radar
+    int n_z_radar_;                       // Measurement dimension for Radar
     int n_z_laser_;                 // Measurement dimension for Lidar
     double lambda_;                 // Sigma point spreading parameter
     int n_cols_sigma_;              // Shortcut for number of columns in sigma matrix
 
-    VectorXd z_pred_;               // predicted measurement mean
-    MatrixXd S_pred_;               // predicted measurement covariance
-    MatrixXd Zsig_;                 // measurement sigma matrix
+    VectorXd z_radar_pred_;               // predicted measurement mean
+    MatrixXd S_radar_pred_;               // predicted measurement covariance
+    MatrixXd Zsig_radar_;                 // measurement sigma matrix
 
     VectorXd z_laser_pred_;         // predicted measurement mean for Lidar
     MatrixXd S_laser_pred_;         // predicted measurement covariance for Lidar
