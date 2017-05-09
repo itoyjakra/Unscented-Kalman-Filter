@@ -48,9 +48,9 @@ class UKF
     double lambda_;                 // Sigma point spreading parameter
     int n_cols_sigma_;              // Shortcut for number of columns in sigma matrix
 
-    VectorXd z_radar_pred_;               // predicted measurement mean
-    MatrixXd S_radar_pred_;               // predicted measurement covariance
-    MatrixXd Zsig_radar_;                 // measurement sigma matrix
+    VectorXd z_radar_pred_;         // predicted measurement mean
+    MatrixXd S_radar_pred_;         // predicted measurement covariance
+    MatrixXd Zsig_radar_;           // measurement sigma matrix
 
     VectorXd z_laser_pred_;         // predicted measurement mean for Lidar
     MatrixXd S_laser_pred_;         // predicted measurement covariance for Lidar
@@ -63,31 +63,7 @@ class UKF
     UKF();
     virtual ~UKF();
 
-    /**
-    * ProcessMeasurement
-    * @param meas_package The latest measurement data of either radar or laser
-    */
     void ProcessMeasurement(MeasurementPackage meas_package);
-
-    /**
-    * Prediction Predicts sigma points, the state, and the state covariance
-    * matrix
-    * @param delta_t Time between k and k+1 in s
-    */
-    // void Prediction(double delta_t);
-
-    /**
-    * Updates the state and the state covariance matrix using a laser measurement
-    * @param meas_package The measurement at k+1
-    */
-    void UpdateLidar(MeasurementPackage meas_package);
-
-    /**
-    * Updates the state and the state covariance matrix using a radar measurement
-    * @param meas_package The measurement at k+1
-    */
-    void UpdateRadar(MeasurementPackage meas_package);
-
     void GenerateSigmaPoints(MatrixXd* Xsig_out);
     void SigmaPointPrediction(MatrixXd Xsig_out, double delta_t);
     void Prediction(double delta_t, int sensor_type) ;
