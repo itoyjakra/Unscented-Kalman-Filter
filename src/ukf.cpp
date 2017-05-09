@@ -87,12 +87,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
     double dt = (meas_package.timestamp_ - previous_timestamp_) / 1000000.0;	
     previous_timestamp_ = meas_package.timestamp_;
 
-    if ((meas_package.sensor_type_ == MeasurementPackage::LASER) & use_laser_)
-    {
-        Prediction(dt, meas_package.sensor_type_);
-        Update(meas_package);
-    }
-    else if ((meas_package.sensor_type_ == MeasurementPackage::RADAR) & use_radar_)
+    bool condition1 = (meas_package.sensor_type_ == MeasurementPackage::LASER) & use_laser_;
+    bool condition2 = (meas_package.sensor_type_ == MeasurementPackage::RADAR) & use_radar_;
+    if (condition1 | condition2)
     {
         Prediction(dt, meas_package.sensor_type_);
         Update(meas_package);
@@ -112,9 +109,9 @@ void UKF::Prediction(double delta_t, int sensor_type)
     x_pred_ = x_out;
     P_pred_ = P_out;
 
-    if (sensor_type == 1)
+    if (sensor_type == MeasurementPackage::RADAR)
         PredictRadarMeasurement();
-    else if (sensor_type == 0)
+    else if (sensor_type == MeasurementPackage::LASER)
         PredictLidarMeasurement();
 }
 
