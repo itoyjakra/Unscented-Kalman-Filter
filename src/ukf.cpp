@@ -7,6 +7,7 @@ using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
+const double SMALL = 1.0e-6;
 
 UKF::UKF() {
     is_initialized_ = false;
@@ -156,8 +157,6 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out)
 
 void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, double delta_t)
 {
-    double small = 1.0e-6;
-
     double half_dtsq = 0.5 * delta_t * delta_t;
 
     double px;
@@ -182,7 +181,7 @@ void UKF::SigmaPointPrediction(MatrixXd Xsig_aug, double delta_t)
         nu_a = col(5);
         nu_psi_dot2 = col(6);
 
-        if (fabs(psi_dot) < small)
+        if (fabs(psi_dot) < SMALL)
         {
             detrm_col(0) = v * cos(psi) * delta_t;
             detrm_col(1) = v * sin(psi) * delta_t;
@@ -230,8 +229,6 @@ void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out)
 
 void UKF::PredictLidarMeasurement()
 {
-    double small = 1.0e-6;
-
     MatrixXd R = MatrixXd(n_z_laser_, n_z_laser_);
 
     double px, py, v, psi, psi_dot, rho, phi, rho_dot;
@@ -266,8 +263,6 @@ void UKF::PredictLidarMeasurement()
 
 void UKF::PredictRadarMeasurement()
 {
-    double small = 1.0e-6;
-
     MatrixXd R = MatrixXd(n_z_radar_, n_z_radar_);
 
     double px, py, v, psi, psi_dot, rho, phi, rho_dot;
@@ -282,7 +277,7 @@ void UKF::PredictRadarMeasurement()
 
         rho = sqrt(px*px + py*py);
         phi = atan2(py, px);
-        if (rho < small)
+        if (rho < SMALL)
             rho_dot = 0;
         else
             rho_dot = v * (px * cos(psi) + py * sin(psi)) / rho;
@@ -311,8 +306,6 @@ void UKF::PredictRadarMeasurement()
 
 void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 {
-    double small = 1.0e-6;
-
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
     MatrixXd Tc = MatrixXd(n_x_, n_z_laser_);
@@ -346,8 +339,6 @@ void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 
 void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 {
-    double small = 1.0e-6;
-
     VectorXd x = VectorXd(n_x_);
     MatrixXd P = MatrixXd(n_x_, n_x_);
     MatrixXd Tc = MatrixXd(n_x_, n_z_radar_);
