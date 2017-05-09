@@ -329,6 +329,7 @@ void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     VectorXd z_diff = z - z_laser_pred_;
     x = x_pred_ + K * z_diff;
     P = P_pred_ - K * S_laser_pred_ * K.transpose();
+    NIS_laser_ = z_diff.transpose() * S_laser_pred_.inverse() * z_diff;
 
     x(3) = atan2(sin(x(3)), cos(x(3)));
     assert (fabs(x(3) < M_PI));
@@ -365,6 +366,7 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
 
     x = x_pred_ + K * z_diff;
     P = P_pred_ - K * S_radar_pred_ * K.transpose();
+    NIS_radar_ = z_diff.transpose() * S_radar_pred_.inverse() * z_diff;
 
     x(3) = atan2(sin(x(3)), cos(x(3)));
     assert (fabs(x(3) < M_PI));
