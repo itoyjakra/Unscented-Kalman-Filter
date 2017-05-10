@@ -124,9 +124,8 @@ void UKF::Update(MeasurementPackage meas_package)
         UpdateState_Lidar(&x_out, &P_out, meas_package.raw_measurements_);
     else if (meas_package.sensor_type_ == MeasurementPackage::RADAR)
         UpdateState_Radar(&x_out, &P_out, meas_package.raw_measurements_);
-    x_ = x_out;
-    P_ = P_out;
-    // TODO NIS calculation
+    x_ = x_pred_ + x_out;
+    P_ = P_pred_ - P_out;
 }
 
 void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) 
@@ -327,8 +326,8 @@ void UKF::UpdateState_Lidar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     K = Tc * S_laser_pred_.inverse();
 
     VectorXd z_diff = z - z_laser_pred_;
-    x = x_pred_ + K * z_diff;
-    P = P_pred_ - K * S_laser_pred_ * K.transpose();
+    x = K * z_diff;
+    P = K * S_laser_pred_ * K.transpose();
     NIS_laser_ = z_diff.transpose() * S_laser_pred_.inverse() * z_diff;
 
     x(3) = atan2(sin(x(3)), cos(x(3)));
@@ -364,8 +363,8 @@ void UKF::UpdateState_Radar(VectorXd* x_out, MatrixXd* P_out, VectorXd z)
     VectorXd z_diff = z - z_radar_pred_;
     z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
 
-    x = x_pred_ + K * z_diff;
-    P = P_pred_ - K * S_radar_pred_ * K.transpose();
+    x = K * z_diff;
+    P = K * S_radar_pred_ * K.transpose();
     NIS_radar_ = z_diff.transpose() * S_radar_pred_.inverse() * z_diff;
 
     x(3) = atan2(sin(x(3)), cos(x(3)));
