@@ -272,6 +272,8 @@ int main(int argc, char* argv[])
     vector<double> NIS_R;
     vector<double> NIS_L;
     int ncross_r, ncross_l;
+    int ncross_sum = 10000;
+    int chosen_index = 0;
 
     for (int i=0; i<n_param; i++)
     {
@@ -315,10 +317,19 @@ int main(int argc, char* argv[])
         std::cout << *std::max_element(NIS_R.begin(), NIS_R.end()) << "\t";
         std::cout << *std::max_element(NIS_L.begin(), NIS_L.end()) << "\t";
         std::cout << ncross_r << "\t" << ncross_l << std::endl;
+        if (ncross_sum > ncross_r + ncross_l)
+        {
+            ncross_sum = ncross_r + ncross_l;
+            chosen_index = i;
+        }
+                 
     }
 
     // run the filter with the best parameter set
-    UKF ukf(param_list[0]);
+    std::cout << "best values are \n";
+    std::cout << "std_a = " << "\t" << param_list[chosen_index].STD_A << std::endl;
+    std::cout << "std_yawdd = " << "\t" << param_list[chosen_index].STD_YAWDD << std::endl;
+    UKF ukf(param_list[chosen_index]);
     run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
 
     // compute the accuracy (RMSE)
