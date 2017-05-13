@@ -9,7 +9,7 @@ using Eigen::VectorXd;
 using std::vector;
 const double SMALL = 1.0e-6;
 
-UKF::UKF() {
+UKF::UKF(ParameterPackage param_pack) {
     is_initialized_ = false;
     n_x_ = 5;
     n_aug_ = 7;
@@ -42,8 +42,8 @@ UKF::UKF() {
     P_pred_ = MatrixXd(n_x_, n_x_);     // predicted state covariance matrix
 
     // Process noise standard deviation
-    std_a_ = 0.3;                       // longitudinal accereration
-    std_yawdd_ = 0.3;                   // yaw acceleration
+    std_a_ = param_pack.STD_A; //0.3;                       // longitudinal accereration
+    std_yawdd_ = param_pack.STD_YAWDD; //0.3;                   // yaw acceleration
 
     // Laser measurement noise standard deviation
     std_laspx_ = 0.15;                  // position 1

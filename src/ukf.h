@@ -2,6 +2,7 @@
 #define UKF_H
 
 #include "measurement_package.h"
+#include "parameter_package.h"
 #include "Eigen/Dense"
 #include <vector>
 #include <string>
@@ -60,7 +61,7 @@ class UKF
     double NIS_laser_;              // the current NIS for laser
     
 
-    UKF();
+    UKF(ParameterPackage param_pack);
     virtual ~UKF();
 
     void ProcessMeasurement(MeasurementPackage meas_package);
