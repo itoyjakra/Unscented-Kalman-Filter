@@ -7,6 +7,8 @@ class ParameterPackage {
 public:
   double STD_A;
   double STD_YAWDD;
+  double MULT_P1;
+  double MULT_P2;
 };
 
 #endif 

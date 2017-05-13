@@ -259,12 +259,18 @@ int main(int argc, char* argv[])
         istringstream iss1(line);
         double std_a;
         double std_yawdd;
+        double mult_p1;
+        double mult_p2;
 
         iss1 >> std_a;
         iss1 >> std_yawdd;
+        iss1 >> mult_p1;
+        iss1 >> mult_p2;
 
         par_package.STD_A = std_a;
         par_package.STD_YAWDD = std_yawdd;
+        par_package.MULT_P1 = mult_p1;
+        par_package.MULT_P2 = mult_p2;
         param_list.push_back(par_package);
         n_param++;
     }
@@ -311,7 +317,7 @@ int main(int argc, char* argv[])
         double stdev_r = sqrt(accum_r / (NIS_R.size()-1));
         double stdev_l = sqrt(accum_l / (NIS_L.size()-1));
 
-        std::cout << i << "\t" << ukf.std_a_ << "\t" << ukf.std_yawdd_ << "\t";
+        std::cout << i << "\t" << ukf.std_a_ << "\t" << ukf.std_yawdd_ << "\t" << param_list[i].MULT_P1 << "\t" << param_list[i].MULT_P2 << "\t";
         std::cout << m_r << "\t" << m_l << "\t";
         std::cout << stdev_r << "\t" << stdev_l << "\t";
         std::cout << *std::max_element(NIS_R.begin(), NIS_R.end()) << "\t";
@@ -329,6 +335,8 @@ int main(int argc, char* argv[])
     std::cout << "best values are \n";
     std::cout << "std_a = " << "\t" << param_list[chosen_index].STD_A << std::endl;
     std::cout << "std_yawdd = " << "\t" << param_list[chosen_index].STD_YAWDD << std::endl;
+    std::cout << "mult_p1 = " << "\t" << param_list[chosen_index].MULT_P1 << std::endl;
+    std::cout << "mult_p2 = " << "\t" << param_list[chosen_index].MULT_P2 << std::endl;
     UKF ukf(param_list[chosen_index]);
     run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
 

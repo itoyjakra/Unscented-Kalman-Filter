@@ -35,8 +35,16 @@ UKF::UKF(ParameterPackage param_pack) {
     use_laser_ = true;
     use_radar_ = true;
 
-    x_ = VectorXd(n_x_);                // state vector
-    P_ = MatrixXd(n_x_, n_x_);          // state covariance matrix
+    //x_ = VectorXd(n_x_);                // state vector
+    x_ = VectorXd::Zero(n_x_);
+
+    //P_ = MatrixXd(n_x_, n_x_);          // state covariance matrix
+    P_ = MatrixXd::Identity(n_x_, n_x_);
+    P_(0, 0) *= param_pack.MULT_P1;
+    P_(1, 1) *= param_pack.MULT_P1;
+    P_(2, 2) *= param_pack.MULT_P2;
+    P_(3, 3) *= param_pack.MULT_P2;
+    P_(4, 4) *= param_pack.MULT_P2;
 
     x_pred_ = VectorXd(n_x_);           // predicted state vector
     P_pred_ = MatrixXd(n_x_, n_x_);     // predicted state covariance matrix
@@ -63,8 +71,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package)
     if (!is_initialized_)
     {
         VectorXd measured_pos = meas_package.raw_measurements_;
-        x_ = VectorXd::Zero(n_x_);
-        P_ = MatrixXd::Identity(n_x_, n_x_);
 
         switch (meas_package.sensor_type_)
         {
