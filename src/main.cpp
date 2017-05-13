@@ -53,6 +53,91 @@ void check_files(ifstream& in_file, string& in_name,
     }
 }
 
+void get_NIS(UKF ukf, vector<MeasurementPackage> measurement_pack_list, vector<double>& NIS_R, vector<double>& NIS_L)
+{
+    size_t number_of_measurements = measurement_pack_list.size();
+
+    for (size_t k = 0; k < number_of_measurements; ++k) 
+    {
+        ukf.ProcessMeasurement(measurement_pack_list[k]);
+        if (k > 2) NIS_R.push_back(ukf.NIS_radar_);
+        NIS_L.push_back(ukf.NIS_laser_);
+    }
+
+}
+
+void run_process(UKF ukf, vector<MeasurementPackage> measurement_pack_list, 
+        vector<GroundTruthPackage> gt_pack_list, ostream& out_file, 
+        vector<VectorXd>& estimations, vector<VectorXd>& ground_truth)
+{
+    size_t number_of_measurements = measurement_pack_list.size();
+
+    for (size_t k = 0; k < number_of_measurements; ++k) 
+    {
+        // Call the UKF-based fusion
+        ukf.ProcessMeasurement(measurement_pack_list[k]);
+
+        // timestamp
+        out_file << measurement_pack_list[k].timestamp_ << "\t"; // pos1 - est
+
+        // output the state vector
+        out_file << ukf.x_(0) << "\t"; // pos1 - est
+        out_file << ukf.x_(1) << "\t"; // pos2 - est
+        out_file << ukf.x_(2) << "\t"; // vel_abs -est
+        out_file << ukf.x_(3) << "\t"; // yaw_angle -est
+        out_file << ukf.x_(4) << "\t"; // yaw_rate -est
+
+        // output lidar and radar specific data
+        if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::LASER) 
+        {
+            // sensor type
+            out_file << "lidar" << "\t";
+
+            // NIS value
+            out_file << ukf.NIS_laser_ << "\t";
+
+            // output the lidar sensor measurement px and py
+            out_file << measurement_pack_list[k].raw_measurements_(0) << "\t";
+            out_file << measurement_pack_list[k].raw_measurements_(1) << "\t";
+
+        } 
+        else if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::RADAR) 
+        {
+            // sensor type
+            out_file << "radar" << "\t";
+
+            // NIS value
+            out_file << ukf.NIS_radar_ << "\t";
+
+            // output radar measurement in cartesian coordinates
+            float ro = measurement_pack_list[k].raw_measurements_(0);
+            float phi = measurement_pack_list[k].raw_measurements_(1);
+            out_file << ro * cos(phi) << "\t"; // px measurement
+            out_file << ro * sin(phi) << "\t"; // py measurement
+        }
+
+        // output the ground truth
+        out_file << gt_pack_list[k].gt_values_(0) << "\t";
+        out_file << gt_pack_list[k].gt_values_(1) << "\t";
+        out_file << gt_pack_list[k].gt_values_(2) << "\t";
+        out_file << gt_pack_list[k].gt_values_(3) << "\n";
+
+        // convert ukf x vector to cartesian to compare to ground truth
+        VectorXd ukf_x_cartesian_ = VectorXd(4);
+
+        float x_estimate_ = ukf.x_(0);
+        float y_estimate_ = ukf.x_(1);
+        float vx_estimate_ = ukf.x_(2) * cos(ukf.x_(3));
+        float vy_estimate_ = ukf.x_(2) * sin(ukf.x_(3));
+        
+        ukf_x_cartesian_ << x_estimate_, y_estimate_, vx_estimate_, vy_estimate_;
+        
+        estimations.push_back(ukf_x_cartesian_);
+        ground_truth.push_back(gt_pack_list[k].gt_values_);
+
+    }
+}
+
 int main(int argc, char* argv[]) 
 {
 
@@ -192,6 +277,7 @@ int main(int argc, char* argv[])
     {
         // Create a UKF instance
         UKF ukf(param_list[i]);
+
         NIS_R = {};
         NIS_L = {};
         estimations = {};
@@ -199,75 +285,7 @@ int main(int argc, char* argv[])
         ncross_r = 0;
         ncross_l = 0;
 
-        for (size_t k = 0; k < number_of_measurements; ++k) 
-        {
-            // Call the UKF-based fusion
-            ukf.ProcessMeasurement(measurement_pack_list[k]);
-
-            // timestamp
-            out_file_ << measurement_pack_list[k].timestamp_ << "\t"; // pos1 - est
-
-            // output the state vector
-            out_file_ << ukf.x_(0) << "\t"; // pos1 - est
-            out_file_ << ukf.x_(1) << "\t"; // pos2 - est
-            out_file_ << ukf.x_(2) << "\t"; // vel_abs -est
-            out_file_ << ukf.x_(3) << "\t"; // yaw_angle -est
-            out_file_ << ukf.x_(4) << "\t"; // yaw_rate -est
-
-            // output lidar and radar specific data
-            if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::LASER) 
-            {
-                // sensor type
-                out_file_ << "lidar" << "\t";
-
-                // NIS value
-                out_file_ << ukf.NIS_laser_ << "\t";
-
-                // output the lidar sensor measurement px and py
-                out_file_ << measurement_pack_list[k].raw_measurements_(0) << "\t";
-                out_file_ << measurement_pack_list[k].raw_measurements_(1) << "\t";
-
-            } 
-            else if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::RADAR) 
-            {
-                // sensor type
-                out_file_ << "radar" << "\t";
-
-                // NIS value
-                out_file_ << ukf.NIS_radar_ << "\t";
-
-                // output radar measurement in cartesian coordinates
-                float ro = measurement_pack_list[k].raw_measurements_(0);
-                float phi = measurement_pack_list[k].raw_measurements_(1);
-                out_file_ << ro * cos(phi) << "\t"; // px measurement
-                out_file_ << ro * sin(phi) << "\t"; // py measurement
-            }
-
-            // output the ground truth
-            out_file_ << gt_pack_list[k].gt_values_(0) << "\t";
-            out_file_ << gt_pack_list[k].gt_values_(1) << "\t";
-            out_file_ << gt_pack_list[k].gt_values_(2) << "\t";
-            out_file_ << gt_pack_list[k].gt_values_(3) << "\n";
-
-            // convert ukf x vector to cartesian to compare to ground truth
-            VectorXd ukf_x_cartesian_ = VectorXd(4);
-
-            float x_estimate_ = ukf.x_(0);
-            float y_estimate_ = ukf.x_(1);
-            float vx_estimate_ = ukf.x_(2) * cos(ukf.x_(3));
-            float vy_estimate_ = ukf.x_(2) * sin(ukf.x_(3));
-            
-            ukf_x_cartesian_ << x_estimate_, y_estimate_, vx_estimate_, vy_estimate_;
-            
-            estimations.push_back(ukf_x_cartesian_);
-            ground_truth.push_back(gt_pack_list[k].gt_values_);
-
-            //if (ukf.NIS_radar_ > 40)
-                //std::cout << "_______________" << k << "\t" << ukf.NIS_radar_ << std::endl;
-            if (k > 2) NIS_R.push_back(ukf.NIS_radar_);
-            NIS_L.push_back(ukf.NIS_laser_);
-
-        }
+        get_NIS(ukf, measurement_pack_list, NIS_R, NIS_L);
 
 		double sum_r = std::accumulate(std::begin(NIS_R), std::end(NIS_R), 0.0);
 		double m_r =  sum_r / NIS_R.size();
@@ -298,6 +316,10 @@ int main(int argc, char* argv[])
         std::cout << *std::max_element(NIS_L.begin(), NIS_L.end()) << "\t";
         std::cout << ncross_r << "\t" << ncross_l << std::endl;
     }
+
+    // run the filter with the best parameter set
+    UKF ukf(param_list[0]);
+    run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
 
     // compute the accuracy (RMSE)
     Tools tools;
