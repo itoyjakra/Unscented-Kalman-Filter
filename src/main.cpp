@@ -19,7 +19,8 @@ void check_arguments(int argc, char* argv[])
 {
     string usage_instructions = "Usage instructions: ";
     usage_instructions += argv[0];
-    usage_instructions += " path/to/input.txt output.txt";
+    usage_instructions += " <path_to_input_measurement_file> <output_file_name> <mode(either 0 or 1)>\n";
+    usage_instructions += "Example: ./UnscentedKF input.txt output.txt 0";
 
     bool has_valid_args = false;
 
