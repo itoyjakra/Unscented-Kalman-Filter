@@ -141,6 +141,25 @@ void run_process(UKF ukf, vector<MeasurementPackage> measurement_pack_list,
     }
 }
 
+void print_column_names(ofstream& file_name)
+{
+    // column names for output file
+    file_name << "time_stamp" << "\t";  
+    file_name << "px_state" << "\t";
+    file_name << "py_state" << "\t";
+    file_name << "v_state" << "\t";
+    file_name << "yaw_angle_state" << "\t";
+    file_name << "yaw_rate_state" << "\t";
+    file_name << "sensor_type" << "\t";
+    file_name << "NIS" << "\t";  
+    file_name << "px_measured" << "\t";
+    file_name << "py_measured" << "\t";
+    file_name << "px_ground_truth" << "\t";
+    file_name << "py_ground_truth" << "\t";
+    file_name << "vx_ground_truth" << "\t";
+    file_name << "vy_ground_truth" << "\n";
+}
+
 int main(int argc, char* argv[]) 
 {
 
@@ -161,17 +180,11 @@ int main(int argc, char* argv[])
 
     check_files(in_file_, in_file_name_, out_file_, out_file_name_);
 
-    /**********************************************
-    *  Set Measurements                          *
-    **********************************************/
-
     vector<MeasurementPackage> measurement_pack_list;
     vector<GroundTruthPackage> gt_pack_list;
 
     string line;
 
-    // prep the measurement packages (each line represents a measurement at a
-    // timestamp)
     while (getline(in_file_, line)) 
     {
         string sensor_type;
@@ -236,34 +249,18 @@ int main(int argc, char* argv[])
     vector<VectorXd> estimations;
     vector<VectorXd> ground_truth;
 
-    // start filtering from the second frame (the speed is unknown in the first
-    // frame)
-
     size_t number_of_measurements = measurement_pack_list.size();
 
-    // column names for output file
-    out_file_ << "time_stamp" << "\t";  
-    out_file_ << "px_state" << "\t";
-    out_file_ << "py_state" << "\t";
-    out_file_ << "v_state" << "\t";
-    out_file_ << "yaw_angle_state" << "\t";
-    out_file_ << "yaw_rate_state" << "\t";
-    out_file_ << "sensor_type" << "\t";
-    out_file_ << "NIS" << "\t";  
-    out_file_ << "px_measured" << "\t";
-    out_file_ << "py_measured" << "\t";
-    out_file_ << "px_ground_truth" << "\t";
-    out_file_ << "py_ground_truth" << "\t";
-    out_file_ << "vx_ground_truth" << "\t";
-    out_file_ << "vy_ground_truth" << "\n";
-
+    // print the header in the output file
+    print_column_names(out_file_);
 
     vector<double> NIS_R;
     vector<double> NIS_L;
 
+    // take action based on user input
     switch (mode)
     {
-        case RunMode::NORMAL:
+        case RunMode::NORMAL:       // run UKF based on fixed parameters
             {
                 ParameterPackage best_param;
                 best_param.STD_A = 0.8;
@@ -275,11 +272,21 @@ int main(int argc, char* argv[])
                 run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
             }
             break;
-        case RunMode::EXPLORE:
+        case RunMode::EXPLORE:      // run UKF based on parameter combinations
             {
                 vector<ParameterPackage> param_list;
                 string p_file_name_ = "param.in";
                 ifstream p_file_(p_file_name_.c_str(), ifstream::in);
+
+                if (!p_file_.is_open()) 
+                {
+                    cerr << "Cannot open input file: " << p_file_name_ << endl;
+                    cerr << "Create a file named param.in" << endl;
+                    cerr << "Each line should have a combination of the following parameter values:" << endl;
+                    cerr << "STD_A STD_YAWDD MULT_P1 MULT_P2" << endl;
+                    cerr << "See ParameterPackage for definitions" <<endl;
+                    exit(EXIT_FAILURE);
+                }
 
                 int n_param = 0;
                 while (getline(p_file_, line)) 

@@ -44,7 +44,7 @@ class UKF
 
     int n_x_;                       // State dimension
     int n_aug_;                     // Augmented state dimension
-    int n_z_radar_;                       // Measurement dimension for Radar
+    int n_z_radar_;                 // Measurement dimension for Radar
     int n_z_laser_;                 // Measurement dimension for Lidar
     double lambda_;                 // Sigma point spreading parameter
     int n_cols_sigma_;              // Shortcut for number of columns in sigma matrix
