@@ -29,8 +29,10 @@ void check_arguments(int argc, char* argv[])
     else if (argc == 2)
         cerr << "Please include an output file.\n" << usage_instructions << endl;
     else if (argc == 3)
+        cerr << "Please include a mode (0:normal or 1:explore).\n" << usage_instructions << endl;
+    else if (argc == 4)
         has_valid_args = true;
-    else if (argc > 3)
+    else if (argc > 4)
         cerr << "Too many arguments.\n" << usage_instructions << endl;
 
     if (!has_valid_args)
@@ -149,6 +151,13 @@ int main(int argc, char* argv[])
     string out_file_name_ = argv[2];
     ofstream out_file_(out_file_name_.c_str(), ofstream::out);
 
+    int mode = atoi(argv[3]);
+    enum RunMode
+    {
+        NORMAL,
+        EXPLORE
+    } run_mode;
+
     check_files(in_file_, in_file_name_, out_file_, out_file_name_);
 
     /**********************************************
@@ -248,97 +257,120 @@ int main(int argc, char* argv[])
     out_file_ << "vy_ground_truth" << "\n";
 
 
-    int n_param = 0;
-    vector<ParameterPackage> param_list;
-    string p_file_name_ = "param.in";
-    ifstream p_file_(p_file_name_.c_str(), ifstream::in);
-
-    while (getline(p_file_, line)) 
-    {
-        ParameterPackage par_package;
-        istringstream iss1(line);
-        double std_a;
-        double std_yawdd;
-        double mult_p1;
-        double mult_p2;
-
-        iss1 >> std_a;
-        iss1 >> std_yawdd;
-        iss1 >> mult_p1;
-        iss1 >> mult_p2;
-
-        par_package.STD_A = std_a;
-        par_package.STD_YAWDD = std_yawdd;
-        par_package.MULT_P1 = mult_p1;
-        par_package.MULT_P2 = mult_p2;
-        param_list.push_back(par_package);
-        n_param++;
-    }
-    std::cout << "number of parameter combinations = " << n_param << std::endl;
     vector<double> NIS_R;
     vector<double> NIS_L;
-    int ncross_r, ncross_l;
-    int ncross_sum = 10000;
-    int chosen_index = 0;
 
-    for (int i=0; i<n_param; i++)
+    switch (mode)
     {
-        // Create a UKF instance
-        UKF ukf(param_list[i]);
+        case RunMode::NORMAL:
+            {
+                ParameterPackage best_param;
+                best_param.STD_A = 0.8;
+                best_param.STD_YAWDD = 0.4;
+                best_param.MULT_P1 = 0.2;
+                best_param.MULT_P2 = 0.4;
 
-        NIS_R = {};
-        NIS_L = {};
-        estimations = {};
-        ground_truth = {};
-        ncross_r = 0;
-        ncross_l = 0;
+                UKF ukf(best_param);
+                run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
+            }
+            break;
+        case RunMode::EXPLORE:
+            {
+                vector<ParameterPackage> param_list;
+                string p_file_name_ = "param.in";
+                ifstream p_file_(p_file_name_.c_str(), ifstream::in);
 
-        get_NIS(ukf, measurement_pack_list, NIS_R, NIS_L);
+                int n_param = 0;
+                while (getline(p_file_, line)) 
+                {
+                    ParameterPackage par_package;
+                    istringstream iss1(line);
+                    double std_a;
+                    double std_yawdd;
+                    double mult_p1;
+                    double mult_p2;
 
-		double sum_r = std::accumulate(std::begin(NIS_R), std::end(NIS_R), 0.0);
-		double m_r =  sum_r / NIS_R.size();
+                    iss1 >> std_a;
+                    iss1 >> std_yawdd;
+                    iss1 >> mult_p1;
+                    iss1 >> mult_p2;
 
-		double sum_l = std::accumulate(std::begin(NIS_L), std::end(NIS_L), 0.0);
-		double m_l =  sum_l / NIS_L.size();
+                    par_package.STD_A = std_a;
+                    par_package.STD_YAWDD = std_yawdd;
+                    par_package.MULT_P1 = mult_p1;
+                    par_package.MULT_P2 = mult_p2;
+                    param_list.push_back(par_package);
+                    n_param++;
+                }
+                std::cout << "number of parameter combinations = " << n_param << std::endl;
 
-		double accum_r = 0.0;
-		double accum_l = 0.0;
-		std::for_each (std::begin(NIS_R), std::end(NIS_R), [&](const double d) 
-		{
-    	    accum_r += (d - m_r) * (d - m_r);
-            if (d > 7.815) ncross_r++;
-		});
-		std::for_each (std::begin(NIS_L), std::end(NIS_L), [&](const double d) 
-		{
-    	    accum_l += (d - m_l) * (d - m_l);
-            if (d > 5.991) ncross_l++;
-		});
+                int ncross_r, ncross_l;
+                int ncross_sum = 10000;
+                int chosen_index = 0;
 
-        double stdev_r = sqrt(accum_r / (NIS_R.size()-1));
-        double stdev_l = sqrt(accum_l / (NIS_L.size()-1));
+                for (int i=0; i<n_param; i++)
+                {
+                    // Create a UKF instance
+                    UKF ukf(param_list[i]);
 
-        std::cout << i << "\t" << ukf.std_a_ << "\t" << ukf.std_yawdd_ << "\t" << param_list[i].MULT_P1 << "\t" << param_list[i].MULT_P2 << "\t";
-        std::cout << m_r << "\t" << m_l << "\t";
-        std::cout << stdev_r << "\t" << stdev_l << "\t";
-        std::cout << *std::max_element(NIS_R.begin(), NIS_R.end()) << "\t";
-        std::cout << *std::max_element(NIS_L.begin(), NIS_L.end()) << "\t";
-        std::cout << ncross_r << "\t" << ncross_l << std::endl;
-        if (ncross_sum > ncross_r + ncross_l)
-        {
-            ncross_sum = ncross_r + ncross_l;
-            chosen_index = i;
-        }
-                 
+                    NIS_R = {};
+                    NIS_L = {};
+                    estimations = {};
+                    ground_truth = {};
+                    ncross_r = 0;
+                    ncross_l = 0;
+
+                    get_NIS(ukf, measurement_pack_list, NIS_R, NIS_L);
+
+                    double sum_r = std::accumulate(std::begin(NIS_R), std::end(NIS_R), 0.0);
+                    double m_r =  sum_r / NIS_R.size();
+
+                    double sum_l = std::accumulate(std::begin(NIS_L), std::end(NIS_L), 0.0);
+                    double m_l =  sum_l / NIS_L.size();
+
+                    double accum_r = 0.0;
+                    double accum_l = 0.0;
+                    std::for_each (std::begin(NIS_R), std::end(NIS_R), [&](const double d) 
+                    {
+                        accum_r += (d - m_r) * (d - m_r);
+                        if (d > 7.815) ncross_r++;
+                    });
+                    std::for_each (std::begin(NIS_L), std::end(NIS_L), [&](const double d) 
+                    {
+                        accum_l += (d - m_l) * (d - m_l);
+                        if (d > 5.991) ncross_l++;
+                    });
+
+                    double stdev_r = sqrt(accum_r / (NIS_R.size()-1));
+                    double stdev_l = sqrt(accum_l / (NIS_L.size()-1));
+
+                    std::cout << i << "\t" << ukf.std_a_ << "\t" << ukf.std_yawdd_ << "\t" << param_list[i].MULT_P1 << "\t" << param_list[i].MULT_P2 << "\t";
+                    std::cout << m_r << "\t" << m_l << "\t";
+                    std::cout << stdev_r << "\t" << stdev_l << "\t";
+                    std::cout << *std::max_element(NIS_R.begin(), NIS_R.end()) << "\t";
+                    std::cout << *std::max_element(NIS_L.begin(), NIS_L.end()) << "\t";
+                    std::cout << ncross_r << "\t" << ncross_l << std::endl;
+                    if (ncross_sum > ncross_r + ncross_l)
+                    {
+                        ncross_sum = ncross_r + ncross_l;
+                        chosen_index = i;
+                    }
+                            
+                }
+                // run the filter with the best parameter set
+                std::cout << "best values are \n";
+                std::cout << "std_a = " << "\t" << param_list[chosen_index].STD_A << std::endl;
+                std::cout << "std_yawdd = " << "\t" << param_list[chosen_index].STD_YAWDD << std::endl;
+                std::cout << "mult_p1 = " << "\t" << param_list[chosen_index].MULT_P1 << std::endl;
+                std::cout << "mult_p2 = " << "\t" << param_list[chosen_index].MULT_P2 << std::endl;
+                UKF ukf(param_list[chosen_index]);
+                run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
+            }
+            break;
+        default:
+            std::cout << "Wrong mode, select either 0 or 1!!!" << std::endl;
+            return 0;
     }
-
-    // run the filter with the best parameter set
-    std::cout << "best values are \n";
-    std::cout << "std_a = " << "\t" << param_list[chosen_index].STD_A << std::endl;
-    std::cout << "std_yawdd = " << "\t" << param_list[chosen_index].STD_YAWDD << std::endl;
-    std::cout << "mult_p1 = " << "\t" << param_list[chosen_index].MULT_P1 << std::endl;
-    std::cout << "mult_p2 = " << "\t" << param_list[chosen_index].MULT_P2 << std::endl;
-    UKF ukf(param_list[chosen_index]);
-    run_process(ukf, measurement_pack_list, gt_pack_list, out_file_, estimations, ground_truth);
 
     // compute the accuracy (RMSE)
     Tools tools;
